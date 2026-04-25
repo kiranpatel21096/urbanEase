@@ -18,9 +18,15 @@ export function AuthCallbackPage() {
   useEffect(() => {
     if (isInitialized && !redirected.current) {
       redirected.current = true
-      // Small delay so the user sees the confirmation message
+      const type = new URLSearchParams(window.location.search).get('type')
       const timer = setTimeout(() => {
-        navigate(user ? '/' : '/login', { replace: true })
+        if (type === 'recovery' && user) {
+          // Password-reset flow: user is now logged in with a recovery token.
+          // Send them to the reset password form.
+          navigate('/reset-password', { replace: true })
+        } else {
+          navigate(user ? '/' : '/login', { replace: true })
+        }
       }, 1500)
       return () => clearTimeout(timer)
     }

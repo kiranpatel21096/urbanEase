@@ -14,7 +14,9 @@ const BookingDetailPage        = lazy(() => import('@/pages/BookingDetailPage').
 const LoginPage                = lazy(() => import('@/pages/LoginPage').then((m) => ({ default: m.LoginPage })))
 const RegisterPage             = lazy(() => import('@/pages/RegisterPage').then((m) => ({ default: m.RegisterPage })))
 const ForgotPasswordPage       = lazy(() => import('@/pages/ForgotPasswordPage').then((m) => ({ default: m.ForgotPasswordPage })))
+const ResetPasswordPage        = lazy(() => import('@/pages/ResetPasswordPage').then((m) => ({ default: m.ResetPasswordPage })))
 const AuthCallbackPage         = lazy(() => import('@/pages/AuthCallbackPage').then((m) => ({ default: m.AuthCallbackPage })))
+const DashboardPage            = lazy(() => import('@/pages/DashboardPage').then((m) => ({ default: m.DashboardPage })))
 const DashboardBookingsPage    = lazy(() => import('@/pages/DashboardBookingsPage').then((m) => ({ default: m.DashboardBookingsPage })))
 const DashboardAvailabilityPage = lazy(() => import('@/pages/DashboardAvailabilityPage').then((m) => ({ default: m.DashboardAvailabilityPage })))
 const ProfilePage              = lazy(() => import('@/pages/ProfilePage').then((m) => ({ default: m.ProfilePage })))
@@ -44,10 +46,11 @@ function S({ children }: { children: React.ReactNode }) {
 
 const router = createBrowserRouter([
   // ── Auth pages ────────────────────────────────────────────────────────────
-  { path: '/login',          element: <S><LoginPage /></S> },
-  { path: '/register',       element: <S><RegisterPage /></S> },
+  { path: '/login',           element: <S><LoginPage /></S> },
+  { path: '/register',        element: <S><RegisterPage /></S> },
   { path: '/forgot-password', element: <S><ForgotPasswordPage /></S> },
-  { path: '/auth/callback',  element: <S><AuthCallbackPage /></S> },
+  { path: '/reset-password',  element: <S><ResetPasswordPage /></S> },
+  { path: '/auth/callback',   element: <S><AuthCallbackPage /></S> },
 
   // ── Admin panel (separate layout, no Header/Footer) ───────────────────────
   {
@@ -71,8 +74,14 @@ const router = createBrowserRouter([
       { path: 'services/:id',          element: <S><ServiceDetailPage /></S> },
       { path: 'providers/:id',         element: <S><ProviderProfilePage /></S> },
       { path: 'search',                element: <S><SearchPage /></S> },
+      { path: 'terms',    element: <S><div className="min-h-screen flex items-center justify-center p-8 text-center"><div><h1 className="text-2xl font-bold mb-3">Terms of Service</h1><p className="text-muted-foreground">Full terms coming soon.</p></div></div></S> },
+      { path: 'privacy',  element: <S><div className="min-h-screen flex items-center justify-center p-8 text-center"><div><h1 className="text-2xl font-bold mb-3">Privacy Policy</h1><p className="text-muted-foreground">Full policy coming soon.</p></div></div></S> },
 
       // Protected — requires sign-in
+      {
+        path: 'dashboard',
+        element: <S><ProtectedRoute><DashboardPage /></ProtectedRoute></S>,
+      },
       {
         path: 'book/:serviceId',
         element: <S><ProtectedRoute><BookingPage /></ProtectedRoute></S>,

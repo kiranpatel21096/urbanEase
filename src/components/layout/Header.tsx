@@ -114,6 +114,13 @@ export function Header() {
                       ) : user.role === 'provider' ? (
                         <>
                           <Link
+                            to="/dashboard"
+                            onClick={() => setProfileOpen(false)}
+                            className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors"
+                          >
+                            <BookOpen size={14} /> Dashboard
+                          </Link>
+                          <Link
                             to="/dashboard/bookings"
                             onClick={() => setProfileOpen(false)}
                             className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors"
@@ -129,13 +136,22 @@ export function Header() {
                           </Link>
                         </>
                       ) : (
-                        <Link
-                          to="/dashboard/bookings"
-                          onClick={() => setProfileOpen(false)}
-                          className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors"
-                        >
-                          <BookOpen size={14} /> My Bookings
-                        </Link>
+                        <>
+                          <Link
+                            to="/dashboard"
+                            onClick={() => setProfileOpen(false)}
+                            className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors"
+                          >
+                            <BookOpen size={14} /> Dashboard
+                          </Link>
+                          <Link
+                            to="/dashboard/bookings"
+                            onClick={() => setProfileOpen(false)}
+                            className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors"
+                          >
+                            <BookOpen size={14} /> My Bookings
+                          </Link>
+                        </>
                       )}
                       <Link
                         to="/dashboard/profile"

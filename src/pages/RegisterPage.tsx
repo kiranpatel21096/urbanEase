@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Eye, EyeOff, Mail, Lock, User, CheckCircle, AlertCircle } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { supabase } from '@/lib/supabase'
@@ -21,6 +21,7 @@ type FormValues = z.infer<typeof schema>
 const REDIRECT_URL = `${window.location.origin}/auth/callback`
 
 export function RegisterPage() {
+  const navigate = useNavigate()
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
@@ -46,7 +47,7 @@ export function RegisterPage() {
     setErrorMsg('')
     setEmailTaken(false)
 
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -63,6 +64,13 @@ export function RegisterPage() {
         setErrorMsg(error.message)
       }
       setIsLoading(false)
+      return
+    }
+
+    // If Supabase returned a session immediately, email confirmation is disabled —
+    // the user is already logged in, so navigate directly to the home page.
+    if (data.session) {
+      navigate('/', { replace: true })
       return
     }
 

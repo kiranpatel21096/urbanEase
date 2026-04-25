@@ -3,11 +3,25 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { Eye, EyeOff, Mail, Lock, AlertCircle } from 'lucide-react'
-import { motion } from 'framer-motion'
+import { Eye, EyeOff, Mail, Lock, AlertCircle, ChevronDown, FlaskConical } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '@/lib/supabase'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+
+const DEMO_ACCOUNTS = [
+  { role: 'Customer', name: 'Priya Sharma',  email: 'customer1@demo.urbanease.in' },
+  { role: 'Customer', name: 'Rahul Desai',   email: 'customer2@demo.urbanease.in' },
+  { role: 'Provider', name: 'Meera Sharma',  email: 'provider1@demo.urbanease.in' },
+  { role: 'Provider', name: 'Rajan Mehta',   email: 'provider2@demo.urbanease.in' },
+  { role: 'Admin',    name: 'Admin User',    email: 'admin@demo.urbanease.in' },
+] as const
+
+const ROLE_COLORS: Record<string, string> = {
+  Customer: 'bg-blue-50 text-blue-700',
+  Provider: 'bg-green-50 text-green-700',
+  Admin:    'bg-purple-50 text-purple-700',
+}
 
 const schema = z.object({
   email: z.string().email('Enter a valid email'),
@@ -21,6 +35,7 @@ export function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
   const [needsConfirmation, setNeedsConfirmation] = useState(false)
+  const [demoOpen, setDemoOpen] = useState(false)
 
   const navigate = useNavigate()
   const location = useLocation()
@@ -29,8 +44,14 @@ export function LoginPage() {
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors },
   } = useForm<FormValues>({ resolver: zodResolver(schema) })
+
+  function fillDemo(email: string) {
+    reset({ email, password: 'Demo@1234' })
+    setDemoOpen(false)
+  }
 
   const onSubmit = async ({ email, password }: FormValues) => {
     setIsLoading(true)
@@ -136,6 +157,63 @@ export function LoginPage() {
               Sign up
             </Link>
           </p>
+        </div>
+
+        {/* Demo accounts panel */}
+        <div className="mt-4 bg-white rounded-2xl border border-border overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setDemoOpen((o) => !o)}
+            className="w-full flex items-center justify-between px-5 py-3.5 text-sm font-medium text-muted-foreground hover:bg-muted/50 transition-colors"
+          >
+            <span className="flex items-center gap-2">
+              <FlaskConical size={15} className="text-primary" />
+              Demo Accounts — click to fill
+            </span>
+            <ChevronDown
+              size={15}
+              className={`transition-transform duration-200 ${demoOpen ? 'rotate-180' : ''}`}
+            />
+          </button>
+
+          <AnimatePresence>
+            {demoOpen && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden"
+              >
+                <div className="border-t border-border">
+                  {DEMO_ACCOUNTS.map((acc) => (
+                    <div
+                      key={acc.email}
+                      className="flex items-center gap-3 px-5 py-3 border-b border-border/60 last:border-b-0"
+                    >
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${ROLE_COLORS[acc.role]}`}>
+                        {acc.role}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-foreground truncate">{acc.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{acc.email}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => fillDemo(acc.email)}
+                        className="flex-shrink-0 text-xs font-semibold text-primary hover:underline"
+                      >
+                        Fill
+                      </button>
+                    </div>
+                  ))}
+                  <p className="px-5 py-2.5 text-xs text-muted-foreground bg-muted/30">
+                    Password for all accounts: <span className="font-mono font-semibold text-foreground">Demo@1234</span>
+                  </p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </motion.div>
     </div>
