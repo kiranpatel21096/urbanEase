@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { Menu, X, User, LogOut, BookOpen, ChevronDown } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/store/authStore'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -15,7 +16,7 @@ export function Header() {
   const [scrolled, setScrolled] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
-  const { user, logout } = useAuthStore()
+  const { user } = useAuthStore()
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -24,9 +25,10 @@ export function Header() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  const handleLogout = () => {
-    logout()
+  const handleLogout = async () => {
     setProfileOpen(false)
+    await supabase.auth.signOut()
+    // onAuthStateChange fires SIGNED_OUT → useAuthInit calls logout() → store cleared
     navigate('/')
   }
 

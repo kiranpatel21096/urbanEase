@@ -4,9 +4,11 @@ import type { User } from '@/types'
 
 interface AuthState {
   user: User | null
-  isLoading: boolean
+  isLoading: boolean        // true while session is being resolved on app boot
+  isInitialized: boolean    // flips to true after the first getSession() call resolves
   setUser: (user: User | null) => void
   setLoading: (loading: boolean) => void
+  setInitialized: () => void
   logout: () => void
 }
 
@@ -15,9 +17,11 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       user: null,
       isLoading: true,
-      setUser: (user) => set({ user, isLoading: false }),
+      isInitialized: false,
+      setUser: (user) => set({ user, isLoading: false, isInitialized: true }),
       setLoading: (isLoading) => set({ isLoading }),
-      logout: () => set({ user: null, isLoading: false }),
+      setInitialized: () => set({ isLoading: false, isInitialized: true }),
+      logout: () => set({ user: null, isLoading: false, isInitialized: true }),
     }),
     {
       name: 'urbanease-auth',

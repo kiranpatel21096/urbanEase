@@ -1,8 +1,10 @@
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useNavigate } from 'react-router-dom'
-import { User, Mail, Phone, Save } from 'lucide-react'
+import { User, Mail, Phone, Save, CheckCircle } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/store/authStore'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -16,8 +18,10 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>
 
 export function ProfilePage() {
-  const { user } = useAuthStore()
+  const { user, setUser } = useAuthStore()
   const navigate = useNavigate()
+  const [saved, setSaved] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
 
   if (!user) {
     navigate('/login')
@@ -37,8 +41,28 @@ export function ProfilePage() {
     },
   })
 
-  const onSubmit = (data: FormValues) => {
-    console.log('Profile updated:', data)
+  const onSubmit = async (data: FormValues) => {
+    setIsSaving(true)
+    setSaved(false)
+
+    // Update Supabase auth user_metadata
+    const { data: updated, error } = await supabase.auth.updateUser({
+      data: { full_name: data.full_name, phone: data.phone },
+    })
+
+    if (!error && updated.user) {
+      setUser({ ...user, full_name: data.full_name, phone: data.phone })
+      setSaved(true)
+      setTimeout(() => setSaved(false), 3000)
+    }
+
+    // Also update the profiles table row
+    await supabase
+      .from('profiles')
+      .update({ full_name: data.full_name, phone: data.phone })
+      .eq('id', user.id)
+
+    setIsSaving(false)
   }
 
   return (
@@ -48,8 +72,12 @@ export function ProfilePage() {
 
         <div className="bg-white rounded-2xl border border-border p-6 mb-6">
           <div className="flex items-center gap-4 mb-6">
-            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-2xl font-bold text-primary">
-              {user.full_name[0]}
+            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
+              {user.avatar_url ? (
+                <img src={user.avatar_url} alt={user.full_name} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-2xl font-bold text-primary">{user.full_name[0]}</span>
+              )}
             </div>
             <div>
               <p className="font-bold text-foreground">{user.full_name}</p>
@@ -67,6 +95,7 @@ export function ProfilePage() {
             <Input
               label="Email address"
               type="email"
+              disabled
               leftIcon={<Mail size={16} />}
               error={errors.email?.message}
               {...register('email')}
@@ -78,9 +107,17 @@ export function ProfilePage() {
               leftIcon={<Phone size={16} />}
               {...register('phone')}
             />
-            <Button type="submit" disabled={!isDirty} className="gap-2">
-              <Save size={16} /> Save Changes
-            </Button>
+
+            <div className="flex items-center gap-3">
+              <Button type="submit" disabled={!isDirty || isSaving} loading={isSaving} className="gap-2">
+                <Save size={16} /> Save Changes
+              </Button>
+              {saved && (
+                <span className="flex items-center gap-1 text-sm text-success">
+                  <CheckCircle size={14} /> Saved!
+                </span>
+              )}
+            </div>
           </form>
         </div>
       </div>

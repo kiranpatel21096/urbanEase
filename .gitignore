@@ -23,11 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 
-CLAUDE.md
 .playwright-*/
 INSTRUCTIONS.md
-RULES.md
-TODO.md
 docs/
 .claude/
 .agents/
