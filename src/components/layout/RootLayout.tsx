@@ -1,4 +1,4 @@
-import { Outlet, useLocation } from 'react-router-dom'
+import { Outlet, ScrollRestoration, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Header } from './Header'
 import { Footer } from './Footer'
@@ -29,6 +29,7 @@ export function RootLayout() {
         </motion.main>
       </AnimatePresence>
       <Footer />
+      <ScrollRestoration />
     </div>
   )
 }

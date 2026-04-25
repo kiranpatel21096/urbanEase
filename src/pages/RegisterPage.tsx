@@ -24,6 +24,7 @@ export function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
+  const [emailTaken, setEmailTaken] = useState(false)
   const [emailSent, setEmailSent] = useState(false)
   const [sentTo, setSentTo] = useState('')
 
@@ -43,6 +44,7 @@ export function RegisterPage() {
   const onSubmit = async ({ email, password, full_name, role }: FormValues) => {
     setIsLoading(true)
     setErrorMsg('')
+    setEmailTaken(false)
 
     const { error } = await supabase.auth.signUp({
       email,
@@ -54,7 +56,12 @@ export function RegisterPage() {
     })
 
     if (error) {
-      setErrorMsg(error.message)
+      const msg = error.message.toLowerCase()
+      if (msg.includes('already registered') || msg.includes('already exists') || error.code === 'user_already_exists') {
+        setEmailTaken(true)
+      } else {
+        setErrorMsg(error.message)
+      }
       setIsLoading(false)
       return
     }
@@ -134,7 +141,19 @@ export function RegisterPage() {
             ))}
           </div>
 
-          {errorMsg && (
+          {emailTaken && (
+            <div className="flex items-start gap-2 bg-destructive/5 border border-destructive/20 rounded-xl p-3 mb-4 text-sm text-destructive">
+              <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
+              <span>
+                An account with this email already exists.{' '}
+                <Link to="/login" className="font-semibold underline underline-offset-2">
+                  Sign in instead
+                </Link>
+                {' '}or use a different email.
+              </span>
+            </div>
+          )}
+          {errorMsg && !emailTaken && (
             <div className="flex items-start gap-2 bg-destructive/5 border border-destructive/20 rounded-xl p-3 mb-4 text-sm text-destructive">
               <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
               <span>{errorMsg}</span>

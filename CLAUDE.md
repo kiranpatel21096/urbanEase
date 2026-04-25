@@ -32,4 +32,14 @@ UrbanEase is a doorstep home-services platform that connects urban consumers wit
 - Tailwind Version: Latest stable
 - Repository Location: `c:\Users\Parimal\OneDrive\Documents\gtu\urbanEase`
 
+## Cloudflare Proxy (Supabase)
+
+Direct access to Supabase (`mpbmusdufavfhrqhbfrc.supabase.co`) is blocked on the development network without a VPN. A Cloudflare Worker transparently proxies all Supabase traffic.
+
+- **Worker URL:** `https://urbanease-supabase-proxy.kiranpatel21096.workers.dev`
+- **Worker source:** `cloudflare/worker.js` + `cloudflare/wrangler.toml`
+- **Redeploy:** `CLOUDFLARE_API_TOKEN=<token> npx wrangler deploy --config cloudflare/wrangler.toml`
+- **`.env.local`** must have `VITE_SUPABASE_URL` set to the Worker URL above (not the raw Supabase URL).
+- If the Worker needs updating, edit `cloudflare/worker.js` and redeploy with the command above.
+
 Important: DO NOT COMMIT YOURSELF. ASK MY APPROVAL

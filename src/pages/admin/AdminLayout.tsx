@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { NavLink, Outlet, ScrollRestoration, useNavigate } from 'react-router-dom'
 import { LayoutDashboard, CalendarCheck, Users, Wrench, LogOut } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { supabase } from '@/lib/supabase'
@@ -61,6 +61,7 @@ export function AdminLayout() {
       <main className="flex-1 ml-60 min-h-screen">
         <Outlet />
       </main>
+      <ScrollRestoration />
     </div>
   )
 }
