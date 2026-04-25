@@ -1,22 +1,56 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { Clock, Star, ArrowLeft, BadgeCheck } from 'lucide-react'
-import { mockServices, mockProviders } from '@/data/mockData'
+import { useService } from '@/hooks/useServices'
+import { useProviders } from '@/hooks/useProviders'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { StarRating } from '@/components/shared/StarRating'
 import { ProviderCard } from '@/components/provider/ProviderCard'
 import { formatPrice } from '@/lib/utils'
 
+function Skeleton({ className }: { className?: string }) {
+  return <div className={`bg-muted animate-pulse rounded-xl ${className ?? ''}`} />
+}
+
 export function ServiceDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
 
-  const service = mockServices.find((s) => s.id === id)
+  const { data: service, isLoading: serviceLoading } = useService(id!)
+  const { data: allProviders = [], isLoading: providersLoading } = useProviders()
+
+  const isLoading = serviceLoading || providersLoading
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-muted/20">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <Skeleton className="h-4 w-28 mb-6" />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2 space-y-6">
+              <Skeleton className="h-64 w-full" />
+              <Skeleton className="h-40 w-full" />
+            </div>
+            <Skeleton className="h-80 w-full" />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   if (!service) return null
 
-  const providers = mockProviders.filter((p) =>
-    p.skills.some((sk) => service.category.toLowerCase().includes(sk.toLowerCase()) || sk.toLowerCase().includes(service.category.toLowerCase()))
-  ).slice(0, 3) || mockProviders.slice(0, 2)
+  const providers = allProviders
+    .filter((p) =>
+      p.skills.some(
+        (sk) =>
+          service.category.toLowerCase().includes(sk.toLowerCase()) ||
+          sk.toLowerCase().includes(service.category.toLowerCase()),
+      ),
+    )
+    .slice(0, 3)
+
+  const displayProviders = providers.length > 0 ? providers : allProviders.slice(0, 2)
 
   return (
     <div className="min-h-screen bg-muted/20">
@@ -42,9 +76,7 @@ export function ServiceDetailPage() {
                   <div>
                     <div className="flex items-center gap-2 mb-2">
                       <Badge>{service.category}</Badge>
-                      {service.badge && (
-                        <Badge variant="accent">{service.badge}</Badge>
-                      )}
+                      {service.badge && <Badge variant="accent">{service.badge}</Badge>}
                     </div>
                     <h1 className="text-2xl font-bold text-foreground">{service.name}</h1>
                   </div>
@@ -79,7 +111,12 @@ export function ServiceDetailPage() {
             <div className="bg-white rounded-2xl border border-border p-6">
               <h2 className="text-lg font-bold text-foreground mb-4">What's Included</h2>
               <ul className="space-y-2">
-                {['Professional-grade tools and materials', 'Trained and background-verified expert', 'Before & after cleanup', '30-day service warranty'].map((item) => (
+                {[
+                  'Professional-grade tools and materials',
+                  'Trained and background-verified expert',
+                  'Before & after cleanup',
+                  '30-day service warranty',
+                ].map((item) => (
                   <li key={item} className="flex items-center gap-3 text-sm text-muted-foreground">
                     <BadgeCheck size={16} className="text-success flex-shrink-0" />
                     {item}
@@ -89,14 +126,16 @@ export function ServiceDetailPage() {
             </div>
 
             {/* Available Providers */}
-            <div>
-              <h2 className="text-lg font-bold text-foreground mb-4">Available Professionals</h2>
-              <div className="space-y-3">
-                {(providers.length > 0 ? providers : mockProviders.slice(0, 2)).map((provider) => (
-                  <ProviderCard key={provider.id} provider={provider} compact />
-                ))}
+            {displayProviders.length > 0 && (
+              <div>
+                <h2 className="text-lg font-bold text-foreground mb-4">Available Professionals</h2>
+                <div className="space-y-3">
+                  {displayProviders.map((provider) => (
+                    <ProviderCard key={provider.id} provider={provider} compact />
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Sticky booking card */}
@@ -122,12 +161,14 @@ export function ServiceDetailPage() {
               </Button>
 
               <div className="mt-6 pt-5 border-t border-border space-y-2">
-                {['Fixed, upfront pricing', 'On-time guarantee', '30-day service warranty', 'Secure checkout'].map((f) => (
-                  <div key={f} className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <BadgeCheck size={13} className="text-success" />
-                    {f}
-                  </div>
-                ))}
+                {['Fixed, upfront pricing', 'On-time guarantee', '30-day service warranty', 'Secure checkout'].map(
+                  (f) => (
+                    <div key={f} className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <BadgeCheck size={13} className="text-success" />
+                      {f}
+                    </div>
+                  ),
+                )}
               </div>
             </div>
           </div>

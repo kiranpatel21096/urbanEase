@@ -1,22 +1,50 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, MapPin, BadgeCheck, Briefcase } from 'lucide-react'
-import { mockProviders, mockReviews } from '@/data/mockData'
+import { useProvider } from '@/hooks/useProviders'
+import { useReviews } from '@/hooks/useReviews'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { StarRating } from '@/components/shared/StarRating'
 import { formatDate } from '@/lib/utils'
 
+function Skeleton({ className }: { className?: string }) {
+  return <div className={`bg-muted animate-pulse rounded-xl ${className ?? ''}`} />
+}
+
 export function ProviderProfilePage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
 
-  const provider = mockProviders.find((p) => p.id === id)
+  const { data: provider, isLoading: providerLoading } = useProvider(id!)
+  const { data: reviews = [], isLoading: reviewsLoading } = useReviews(id!)
+
+  const isLoading = providerLoading || reviewsLoading
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-muted/20">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <Skeleton className="h-4 w-16 mb-6" />
+          <Skeleton className="h-64 w-full mb-6" />
+          <Skeleton className="h-40 w-full mb-6" />
+        </div>
+      </div>
+    )
+  }
+
   if (!provider) return null
 
-  const reviews = mockReviews.filter((r) => r.provider_id === provider.id)
-
   const ratingDistribution = [5, 4, 3, 2, 1].map((star) => {
-    const count = reviews.filter((r) => r.rating === star).length || Math.max(0, Math.round(provider.total_reviews * (star === 5 ? 0.6 : star === 4 ? 0.25 : star === 3 ? 0.1 : 0.05) / 1))
+    const count =
+      reviews.filter((r) => r.rating === star).length ||
+      Math.max(
+        0,
+        Math.round(
+          (provider.total_reviews *
+            (star === 5 ? 0.6 : star === 4 ? 0.25 : star === 3 ? 0.1 : 0.05)) /
+            1,
+        ),
+      )
     return { star, count }
   })
   const maxCount = Math.max(...ratingDistribution.map((r) => r.count))
@@ -46,9 +74,7 @@ export function ProviderProfilePage() {
 
             <div className="flex items-center gap-2 mb-1">
               <h1 className="text-xl font-bold text-foreground">{provider.name}</h1>
-              {provider.is_verified && (
-                <BadgeCheck size={18} className="text-primary" />
-              )}
+              {provider.is_verified && <BadgeCheck size={18} className="text-primary" />}
             </div>
 
             <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground mb-3">
@@ -101,27 +127,35 @@ export function ProviderProfilePage() {
         {/* Reviews */}
         <div className="space-y-4">
           <h2 className="text-lg font-bold text-foreground">Customer Reviews</h2>
-          {reviews.length > 0 ? reviews.map((review) => (
-            <div key={review.id} className="bg-white rounded-2xl border border-border p-5">
-              <div className="flex items-start gap-3 mb-3">
-                <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  {review.customer?.avatar_url ? (
-                    <img src={review.customer.avatar_url} alt="" className="w-9 h-9 rounded-full object-cover" />
-                  ) : (
-                    <span className="text-sm font-semibold text-primary">{review.customer?.full_name[0]}</span>
-                  )}
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between">
-                    <p className="font-medium text-sm text-foreground">{review.customer?.full_name}</p>
-                    <p className="text-xs text-muted-foreground">{formatDate(review.created_at)}</p>
+          {reviews.length > 0 ? (
+            reviews.map((review) => (
+              <div key={review.id} className="bg-white rounded-2xl border border-border p-5">
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    {review.customer?.avatar_url ? (
+                      <img
+                        src={review.customer.avatar_url}
+                        alt=""
+                        className="w-9 h-9 rounded-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-sm font-semibold text-primary">
+                        {review.customer?.full_name?.[0] ?? '?'}
+                      </span>
+                    )}
                   </div>
-                  <StarRating rating={review.rating} size="sm" className="mt-0.5" />
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <p className="font-medium text-sm text-foreground">{review.customer?.full_name}</p>
+                      <p className="text-xs text-muted-foreground">{formatDate(review.created_at)}</p>
+                    </div>
+                    <StarRating rating={review.rating} size="sm" className="mt-0.5" />
+                  </div>
                 </div>
+                <p className="text-sm text-muted-foreground leading-relaxed">{review.comment}</p>
               </div>
-              <p className="text-sm text-muted-foreground leading-relaxed">{review.comment}</p>
-            </div>
-          )) : (
+            ))
+          ) : (
             <div className="bg-white rounded-2xl border border-border p-8 text-center">
               <p className="text-sm text-muted-foreground">No reviews yet.</p>
             </div>

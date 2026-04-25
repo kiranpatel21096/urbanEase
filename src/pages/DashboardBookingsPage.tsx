@@ -5,32 +5,11 @@ import { Calendar, Clock, MapPin, ChevronRight } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { useAuthStore } from '@/store/authStore'
+import { useBookings } from '@/hooks/useBookings'
 import { formatDate, formatPrice } from '@/lib/utils'
 import type { BookingStatus } from '@/types'
-import { mockServices, mockProviders } from '@/data/mockData'
 
 type Tab = 'upcoming' | 'completed' | 'cancelled'
-
-const mockBookings = [
-  {
-    id: 'b1',
-    service: mockServices[7],
-    provider: mockProviders[0],
-    scheduled_at: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
-    status: 'Confirmed' as BookingStatus,
-    total_price: mockServices[7].base_price + 49,
-    address: { line1: '12, Shyamal Row Houses, Satellite', city: 'Ahmedabad' },
-  },
-  {
-    id: 'b2',
-    service: mockServices[1],
-    provider: mockProviders[3],
-    scheduled_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-    status: 'Completed' as BookingStatus,
-    total_price: mockServices[1].base_price + 49,
-    address: { line1: '12, Shyamal Row Houses, Satellite', city: 'Ahmedabad' },
-  },
-]
 
 const statusVariant: Record<BookingStatus, 'default' | 'success' | 'warning' | 'destructive' | 'outline'> = {
   Confirmed: 'default',
@@ -42,27 +21,29 @@ const statusVariant: Record<BookingStatus, 'default' | 'success' | 'warning' | '
   Cancelled: 'destructive',
 }
 
+const tabs: { key: Tab; label: string }[] = [
+  { key: 'upcoming', label: 'Upcoming' },
+  { key: 'completed', label: 'Completed' },
+  { key: 'cancelled', label: 'Cancelled' },
+]
+
 export function DashboardBookingsPage() {
   const [activeTab, setActiveTab] = useState<Tab>('upcoming')
   const { user } = useAuthStore()
   const navigate = useNavigate()
+  const { data: bookings = [], isLoading } = useBookings()
 
   if (!user) {
     navigate('/login')
     return null
   }
 
-  const filtered = mockBookings.filter((b) => {
-    if (activeTab === 'upcoming') return ['Confirmed', 'Pro Assigned', 'On the Way', 'Arrived', 'In Progress'].includes(b.status)
+  const filtered = bookings.filter((b) => {
+    if (activeTab === 'upcoming')
+      return ['Confirmed', 'Pro Assigned', 'On the Way', 'Arrived', 'In Progress'].includes(b.status)
     if (activeTab === 'completed') return b.status === 'Completed'
     return b.status === 'Cancelled'
   })
-
-  const tabs: { key: Tab; label: string }[] = [
-    { key: 'upcoming', label: 'Upcoming' },
-    { key: 'completed', label: 'Completed' },
-    { key: 'cancelled', label: 'Cancelled' },
-  ]
 
   return (
     <div className="min-h-screen bg-muted/20">
@@ -84,8 +65,22 @@ export function DashboardBookingsPage() {
           ))}
         </div>
 
-        {/* Bookings list */}
-        {filtered.length === 0 ? (
+        {isLoading ? (
+          <div className="space-y-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="bg-white rounded-2xl border border-border p-5 animate-pulse">
+                <div className="flex gap-4">
+                  <div className="w-16 h-16 rounded-xl bg-muted flex-shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 bg-muted rounded w-2/3" />
+                    <div className="h-3 bg-muted rounded w-1/3" />
+                    <div className="h-3 bg-muted rounded w-1/2" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
           <EmptyState
             title={`No ${activeTab} bookings`}
             description="When you book a service, it will appear here."
@@ -104,23 +99,29 @@ export function DashboardBookingsPage() {
                 className="bg-white rounded-2xl border border-border p-5 cursor-pointer hover:shadow-card-hover transition-all"
               >
                 <div className="flex items-start gap-4">
-                  <img
-                    src={booking.service.thumbnail_url}
-                    alt={booking.service.name}
-                    className="w-16 h-16 rounded-xl object-cover flex-shrink-0"
-                  />
+                  {booking.service?.thumbnail_url && (
+                    <img
+                      src={booking.service.thumbnail_url}
+                      alt={booking.service.name}
+                      className="w-16 h-16 rounded-xl object-cover flex-shrink-0"
+                    />
+                  )}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <p className="font-semibold text-foreground text-sm">{booking.service.name}</p>
-                        <p className="text-xs text-muted-foreground">{booking.provider.name}</p>
+                        <p className="font-semibold text-foreground text-sm">{booking.service?.name}</p>
+                        <p className="text-xs text-muted-foreground">{booking.provider?.name ?? 'Assigning professional…'}</p>
                       </div>
                       <Badge variant={statusVariant[booking.status]}>{booking.status}</Badge>
                     </div>
                     <div className="flex flex-wrap gap-3 mt-3 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1"><Calendar size={12} />{formatDate(booking.scheduled_at)}</span>
-                      <span className="flex items-center gap-1"><Clock size={12} />{booking.service.duration_minutes} min</span>
-                      <span className="flex items-center gap-1"><MapPin size={12} />{booking.address.city}</span>
+                      {booking.service?.duration_minutes && (
+                        <span className="flex items-center gap-1"><Clock size={12} />{booking.service.duration_minutes} min</span>
+                      )}
+                      {booking.address && (
+                        <span className="flex items-center gap-1"><MapPin size={12} />{booking.address.city}</span>
+                      )}
                     </div>
                     <div className="flex items-center justify-between mt-3">
                       <span className="text-sm font-bold text-primary">{formatPrice(booking.total_price)}</span>

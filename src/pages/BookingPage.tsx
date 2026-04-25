@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Check } from 'lucide-react'
-import { mockServices, mockAddresses } from '@/data/mockData'
+import { mockAddresses } from '@/data/mockData'
+import { useService } from '@/hooks/useServices'
 import { useCartStore } from '@/store/cartStore'
 import { useAuthStore } from '@/store/authStore'
 import { Button } from '@/components/ui/button'
@@ -24,7 +25,20 @@ export function BookingPage() {
   const [currentStep, setCurrentStep] = useState<Step>(1)
   const [bookingId] = useState(generateBookingId())
 
-  const service = mockServices.find((s) => s.id === serviceId)
+  const { data: service, isLoading } = useService(serviceId!)
+
+  if (!user) {
+    navigate('/login')
+    return null
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+      </div>
+    )
+  }
 
   if (!service) {
     return (
@@ -35,11 +49,6 @@ export function BookingPage() {
         </div>
       </div>
     )
-  }
-
-  if (!user) {
-    navigate('/login')
-    return null
   }
 
   const availableDates = Array.from({ length: 7 }, (_, i) => addDays(startOfDay(new Date()), i))
