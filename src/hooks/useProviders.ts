@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { useAuthStore } from '@/store/authStore'
 import type { Provider } from '@/types'
 
 function rowToProvider(row: Record<string, unknown>): Provider {
@@ -34,19 +35,38 @@ export function useProviders() {
   })
 }
 
-export function useProvider(id: string) {
+export function useProvider(id: string | undefined) {
   return useQuery<Provider>({
     queryKey: ['providers', id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('providers')
         .select('*')
-        .eq('id', id)
+        .eq('id', id!)
         .single()
       if (error) throw error
       return rowToProvider(data)
     },
     enabled: !!id,
     staleTime: 1000 * 60 * 10,
+  })
+}
+
+/** Returns the provider profile row for the currently signed-in provider user. */
+export function useMyProvider() {
+  const { user } = useAuthStore()
+  return useQuery<Provider | null>({
+    queryKey: ['my-provider', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('providers')
+        .select('*')
+        .eq('user_id', user!.id)
+        .maybeSingle()
+      if (error) throw error
+      return data ? rowToProvider(data) : null
+    },
+    enabled: !!user?.id && user.role === 'provider',
+    staleTime: 1000 * 60 * 5,
   })
 }

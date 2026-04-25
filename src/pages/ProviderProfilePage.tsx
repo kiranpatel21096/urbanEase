@@ -69,7 +69,7 @@ export function ProviderProfilePage() {
                 alt={provider.name}
                 className="w-20 h-20 rounded-2xl object-cover border-4 border-white shadow-card"
               />
-              <Button onClick={() => navigate(`/book/${provider.user_id}`)}>Book Now</Button>
+              <Button onClick={() => navigate(`/services?q=${provider.skills[0] ?? ''}`)}>Book Now</Button>
             </div>
 
             <div className="flex items-center gap-2 mb-1">

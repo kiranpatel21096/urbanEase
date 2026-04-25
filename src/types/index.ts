@@ -1,4 +1,4 @@
-export type UserRole = 'customer' | 'provider';
+export type UserRole = 'customer' | 'provider' | 'admin';
 
 export interface User {
   id: string;
@@ -19,7 +19,8 @@ export type ServiceCategory =
   | 'Painting'
   | 'Pest Control'
   | 'Appliance Repair'
-  | 'Wellness';
+  | 'Wellness'
+  | 'AC Repair';
 
 export interface Service {
   id: string;
@@ -51,7 +52,9 @@ export interface Provider {
 }
 
 export type BookingStatus =
+  | 'Pending'
   | 'Confirmed'
+  | 'Rejected'
   | 'Pro Assigned'
   | 'On the Way'
   | 'Arrived'
@@ -62,16 +65,25 @@ export type BookingStatus =
 export interface Booking {
   id: string;
   customer_id: string;
-  provider_id: string;
+  provider_id: string | null;
   service_id: string;
+  address_id: string | null;
   scheduled_at: string;
-  address: Address;
+  address?: Address;
   status: BookingStatus;
   total_price: number;
   otp?: string;
   created_at: string;
   service?: Service;
   provider?: Provider;
+}
+
+export interface ProviderAvailability {
+  id: string;
+  provider_id: string;
+  day_of_week: number;
+  time_slot: string;
+  is_available: boolean;
 }
 
 export interface Review {

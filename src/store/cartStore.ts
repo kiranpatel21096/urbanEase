@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 import type { Service, Provider } from '@/types'
 
 interface BookingDraft {
@@ -27,17 +28,22 @@ const initialDraft: BookingDraft = {
   addressId: null,
 }
 
-export const useCartStore = create<CartState>()((set) => ({
-  bookingDraft: initialDraft,
-  setService: (service) =>
-    set((state) => ({ bookingDraft: { ...state.bookingDraft, service } })),
-  setProvider: (provider) =>
-    set((state) => ({ bookingDraft: { ...state.bookingDraft, provider } })),
-  setDate: (date) =>
-    set((state) => ({ bookingDraft: { ...state.bookingDraft, date } })),
-  setTimeSlot: (timeSlot) =>
-    set((state) => ({ bookingDraft: { ...state.bookingDraft, timeSlot } })),
-  setAddress: (addressId) =>
-    set((state) => ({ bookingDraft: { ...state.bookingDraft, addressId } })),
-  resetDraft: () => set({ bookingDraft: initialDraft }),
-}))
+export const useCartStore = create<CartState>()(
+  persist(
+    (set) => ({
+      bookingDraft: initialDraft,
+      setService: (service) =>
+        set((state) => ({ bookingDraft: { ...state.bookingDraft, service } })),
+      setProvider: (provider) =>
+        set((state) => ({ bookingDraft: { ...state.bookingDraft, provider } })),
+      setDate: (date) =>
+        set((state) => ({ bookingDraft: { ...state.bookingDraft, date } })),
+      setTimeSlot: (timeSlot) =>
+        set((state) => ({ bookingDraft: { ...state.bookingDraft, timeSlot } })),
+      setAddress: (addressId) =>
+        set((state) => ({ bookingDraft: { ...state.bookingDraft, addressId } })),
+      resetDraft: () => set({ bookingDraft: initialDraft }),
+    }),
+    { name: 'urbanease-cart' }
+  )
+)

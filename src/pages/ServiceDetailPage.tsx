@@ -156,7 +156,7 @@ export function ServiceDetailPage() {
               >
                 Book Now
               </Button>
-              <Button size="lg" variant="outline" className="w-full">
+              <Button size="lg" variant="outline" className="w-full" onClick={() => navigate(`/search?q=${service.category}`)}>
                 View All Providers
               </Button>
 
