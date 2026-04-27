@@ -25,6 +25,8 @@ dist-ssr
 
 .playwright-*/
 INSTRUCTIONS.md
+CLAUDE.md
+RULES.md
 docs/
 .claude/
 .agents/
