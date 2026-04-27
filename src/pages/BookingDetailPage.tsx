@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Calendar, Clock, MapPin, Star, CheckCircle2, Circle, Loader2 } from 'lucide-react'
+import { ArrowLeft, Calendar, Clock, MapPin, Star, CheckCircle2, Circle, Loader2, ExternalLink, RefreshCw } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { useBooking, useUpdateBookingStatus } from '@/hooks/useBookings'
@@ -151,19 +151,27 @@ export function BookingDetailPage() {
             )}
           </div>
 
-          {/* Provider info */}
+          {/* Provider info — links to provider profile */}
           {booking.provider ? (
-            <div className="mt-4 pt-4 border-t border-border flex items-center gap-3">
+            <Link
+              to={`/providers/${booking.provider.id}`}
+              className="mt-4 pt-4 border-t border-border flex items-center gap-3 hover:bg-muted/40 -mx-6 px-6 py-3 transition-colors group"
+            >
               <img
                 src={booking.provider.avatar_url}
                 alt={booking.provider.name}
-                className="w-10 h-10 rounded-full object-cover"
+                className="w-10 h-10 rounded-full object-cover flex-shrink-0"
               />
-              <div>
-                <p className="text-sm font-semibold">{booking.provider.name}</p>
-                <p className="text-xs text-muted-foreground">⭐ {booking.provider.avg_rating} · {booking.provider.city}</p>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
+                  {booking.provider.name}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  ⭐ {booking.provider.avg_rating} · {booking.provider.total_reviews} reviews · {booking.provider.city}
+                </p>
               </div>
-            </div>
+              <ExternalLink size={14} className="text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0" />
+            </Link>
           ) : (
             <div className="mt-4 pt-4 border-t border-border">
               <p className="text-sm text-muted-foreground">Awaiting professional assignment…</p>
@@ -229,6 +237,42 @@ export function BookingDetailPage() {
                 Book Again
               </Button>
             )}
+          </div>
+        )}
+
+        {/* Service cross-link: view service or book again */}
+        {booking.service && (
+          <div className="bg-white rounded-2xl border border-border p-5 mb-4">
+            <p className="text-xs text-muted-foreground mb-3 font-medium uppercase tracking-wide">About the Service</p>
+            <div className="flex items-center gap-4">
+              {booking.service.thumbnail_url && (
+                <img
+                  src={booking.service.thumbnail_url}
+                  alt={booking.service.name}
+                  className="w-14 h-14 rounded-xl object-cover flex-shrink-0"
+                />
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-foreground truncate">{booking.service.name}</p>
+                <p className="text-xs text-muted-foreground">{booking.service.category} · {booking.service.duration_minutes} min</p>
+              </div>
+            </div>
+            <div className="flex gap-2 mt-4">
+              <Link
+                to={`/services/${booking.service_id}`}
+                className="flex-1 flex items-center justify-center gap-1.5 text-sm font-medium text-primary border border-primary/30 rounded-xl py-2.5 hover:bg-primary/5 transition-colors"
+              >
+                <ExternalLink size={14} /> View Service
+              </Link>
+              {isCustomer && (
+                <Link
+                  to={`/book/${booking.service_id}`}
+                  className="flex-1 flex items-center justify-center gap-1.5 text-sm font-medium bg-primary text-white rounded-xl py-2.5 hover:bg-primary/90 transition-colors"
+                >
+                  <RefreshCw size={14} /> Book Again
+                </Link>
+              )}
+            </div>
           </div>
         )}
 

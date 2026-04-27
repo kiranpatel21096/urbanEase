@@ -1,20 +1,54 @@
 import { useState, useEffect } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
-import { Menu, X, User, LogOut, BookOpen, ChevronDown, Calendar, ShieldCheck } from 'lucide-react'
+import { Menu, X, User, LogOut, ChevronDown } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/store/authStore'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import type { User as AppUser } from '@/types'
 
-const navLinks = [
-  { to: '/services', label: 'Services' },
-  { to: '/search', label: 'Find Pros' },
-]
+// ── Nav link definitions per role ─────────────────────────────────────────────
+
+function getNavLinks(user: AppUser | null) {
+  const publicLinks = [
+    { to: '/services', label: 'Services' },
+    { to: '/search',   label: 'Find Pros' },
+  ]
+
+  if (!user) return publicLinks
+
+  if (user.role === 'admin') {
+    return [
+      { to: '/admin',          label: 'Dashboard' },
+      { to: '/admin/bookings', label: 'Bookings' },
+      { to: '/admin/users',    label: 'Users' },
+      { to: '/admin/services', label: 'Services' },
+    ]
+  }
+
+  if (user.role === 'provider') {
+    return [
+      { to: '/dashboard',              label: 'Home' },
+      ...publicLinks,
+      { to: '/dashboard/bookings',     label: 'Job Queue' },
+      { to: '/dashboard/availability', label: 'Availability' },
+    ]
+  }
+
+  // customer
+  return [
+    { to: '/dashboard',          label: 'Home' },
+    ...publicLinks,
+    { to: '/dashboard/bookings', label: 'My Bookings' },
+  ]
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
 
 export function Header() {
-  const [scrolled, setScrolled] = useState(false)
-  const [menuOpen, setMenuOpen] = useState(false)
+  const [scrolled, setScrolled]     = useState(false)
+  const [menuOpen, setMenuOpen]     = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const { user } = useAuthStore()
   const navigate = useNavigate()
@@ -28,9 +62,19 @@ export function Header() {
   const handleLogout = async () => {
     setProfileOpen(false)
     await supabase.auth.signOut()
-    // onAuthStateChange fires SIGNED_OUT → useAuthInit calls logout() → store cleared
     navigate('/')
   }
+
+  const navLinks = getNavLinks(user)
+  const logoTo   = user ? (user.role === 'admin' ? '/admin' : '/dashboard') : '/'
+
+  const navLinkClass = ({ isActive }: { isActive: boolean }) =>
+    cn(
+      'px-3 py-2 rounded-xl text-sm font-medium transition-colors whitespace-nowrap',
+      isActive
+        ? 'bg-primary/10 text-primary'
+        : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+    )
 
   return (
     <header
@@ -42,9 +86,10 @@ export function Header() {
       )}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+        <div className="flex items-center justify-between h-16 gap-4">
+
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2">
+          <Link to={logoTo} className="flex items-center gap-2 flex-shrink-0 mr-2">
             <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center">
               <span className="text-white font-bold text-sm">U</span>
             </div>
@@ -54,27 +99,16 @@ export function Header() {
           </Link>
 
           {/* Desktop Nav */}
-          <nav className="hidden md:flex items-center gap-1">
+          <nav className="hidden md:flex items-center gap-2 flex-1 overflow-x-auto">
             {navLinks.map(({ to, label }) => (
-              <NavLink
-                key={to}
-                to={to}
-                className={({ isActive }) =>
-                  cn(
-                    'px-4 py-2 rounded-xl text-sm font-medium transition-colors',
-                    isActive
-                      ? 'bg-primary/10 text-primary'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                  )
-                }
-              >
+              <NavLink key={to} to={to} className={navLinkClass}>
                 {label}
               </NavLink>
             ))}
           </nav>
 
-          {/* Actions */}
-          <div className="flex items-center gap-3">
+          {/* User menu (Profile + Logout only) */}
+          <div className="flex items-center gap-2 flex-shrink-0">
             {user ? (
               <div className="relative">
                 <button
@@ -101,64 +135,14 @@ export function Header() {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -8 }}
                       transition={{ duration: 0.15 }}
-                      className="absolute right-0 top-full mt-2 w-52 bg-white rounded-2xl shadow-xl border border-border py-1 z-50"
+                      className="absolute right-0 top-full mt-2 w-44 bg-white rounded-2xl shadow-xl border border-border py-1 z-50"
                     >
-                      {user.role === 'admin' ? (
-                        <Link
-                          to="/admin"
-                          onClick={() => setProfileOpen(false)}
-                          className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors"
-                        >
-                          <ShieldCheck size={14} className="text-primary" /> Admin Panel
-                        </Link>
-                      ) : user.role === 'provider' ? (
-                        <>
-                          <Link
-                            to="/dashboard"
-                            onClick={() => setProfileOpen(false)}
-                            className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors"
-                          >
-                            <BookOpen size={14} /> Dashboard
-                          </Link>
-                          <Link
-                            to="/dashboard/bookings"
-                            onClick={() => setProfileOpen(false)}
-                            className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors"
-                          >
-                            <BookOpen size={14} /> Job Queue
-                          </Link>
-                          <Link
-                            to="/dashboard/availability"
-                            onClick={() => setProfileOpen(false)}
-                            className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors"
-                          >
-                            <Calendar size={14} /> My Availability
-                          </Link>
-                        </>
-                      ) : (
-                        <>
-                          <Link
-                            to="/dashboard"
-                            onClick={() => setProfileOpen(false)}
-                            className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors"
-                          >
-                            <BookOpen size={14} /> Dashboard
-                          </Link>
-                          <Link
-                            to="/dashboard/bookings"
-                            onClick={() => setProfileOpen(false)}
-                            className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors"
-                          >
-                            <BookOpen size={14} /> My Bookings
-                          </Link>
-                        </>
-                      )}
                       <Link
                         to="/dashboard/profile"
                         onClick={() => setProfileOpen(false)}
                         className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors"
                       >
-                        <User size={14} /> Profile
+                        <User size={14} className="text-primary" /> Profile
                       </Link>
                       <hr className="my-1 border-border" />
                       <button
@@ -172,13 +156,9 @@ export function Header() {
                 </AnimatePresence>
               </div>
             ) : (
-              <div className="flex items-center gap-2">
-                <Button variant="ghost" size="sm" onClick={() => navigate('/login')}>
-                  Login
-                </Button>
-                <Button size="sm" onClick={() => navigate('/register')}>
-                  Sign Up
-                </Button>
+              <div className="hidden md:flex items-center gap-2">
+                <Button variant="ghost" size="sm" onClick={() => navigate('/login')}>Login</Button>
+                <Button size="sm" onClick={() => navigate('/register')}>Sign Up</Button>
               </div>
             )}
 
@@ -212,37 +192,29 @@ export function Header() {
                   className={({ isActive }) =>
                     cn(
                       'block px-4 py-2.5 rounded-xl text-sm font-medium transition-colors',
-                      isActive
-                        ? 'bg-primary/10 text-primary'
-                        : 'text-muted-foreground hover:bg-muted'
+                      isActive ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted'
                     )
                   }
                 >
                   {label}
                 </NavLink>
               ))}
+
               {user ? (
                 <>
-                  {user.role === 'admin' ? (
-                    <NavLink to="/admin" onClick={() => setMenuOpen(false)} className="block px-4 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:bg-muted">
-                      Admin Panel
-                    </NavLink>
-                  ) : user.role === 'provider' ? (
-                    <>
-                      <NavLink to="/dashboard/bookings" onClick={() => setMenuOpen(false)} className="block px-4 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:bg-muted">
-                        Job Queue
-                      </NavLink>
-                      <NavLink to="/dashboard/availability" onClick={() => setMenuOpen(false)} className="block px-4 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:bg-muted">
-                        My Availability
-                      </NavLink>
-                    </>
-                  ) : (
-                    <NavLink to="/dashboard/bookings" onClick={() => setMenuOpen(false)} className="block px-4 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:bg-muted">
-                      My Bookings
-                    </NavLink>
-                  )}
+                  <hr className="border-border my-1" />
+                  <NavLink
+                    to="/dashboard/profile"
+                    onClick={() => setMenuOpen(false)}
+                    className={({ isActive }) =>
+                      cn('block px-4 py-2.5 rounded-xl text-sm font-medium transition-colors',
+                        isActive ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted')
+                    }
+                  >
+                    Profile
+                  </NavLink>
                   <button
-                    onClick={handleLogout}
+                    onClick={() => { setMenuOpen(false); handleLogout() }}
                     className="block w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium text-destructive hover:bg-destructive/5"
                   >
                     Logout

@@ -14,7 +14,7 @@ export function AdminRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (!user) return <Navigate to="/login" state={{ from: location.pathname }} replace />
-  if (user.role !== 'admin') return <Navigate to="/" replace />
+  if (user.role !== 'admin') return <Navigate to="/dashboard" replace />
 
   return <>{children}</>
 }

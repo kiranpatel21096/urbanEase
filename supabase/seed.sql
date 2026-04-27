@@ -1,6 +1,6 @@
 -- =============================================================================
 -- UrbanEase — Complete Database Seed
--- Run this entire file in Supabase SQL Editor (one shot)
+-- Paste this entire file into Supabase SQL Editor and click Run.
 -- Password for all demo accounts: Demo@1234
 -- =============================================================================
 
@@ -124,76 +124,115 @@ CREATE TRIGGER on_auth_user_created
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
 -- =============================================================================
--- SECTION 3: DEMO AUTH USERS (pre-confirmed, no email verification needed)
--- Fixed UUIDs so seed FK references are stable across runs.
--- Password: Demo@1234
+-- SECTION 3: DEMO AUTH USERS
+-- Uses a helper function (SECURITY DEFINER = runs as postgres superuser).
+-- Password for all: Demo@1234
 -- =============================================================================
 
--- Clear any existing demo users first (safe to re-run)
-DELETE FROM auth.users WHERE email LIKE '%@demo.urbanease.in';
-
-DO $$
-DECLARE
-  c1 uuid := 'a0000000-0000-0000-0000-000000000001'; -- customer1
-  c2 uuid := 'a0000000-0000-0000-0000-000000000002'; -- customer2
-  p1 uuid := 'a0000000-0000-0000-0000-000000000003'; -- provider1
-  p2 uuid := 'a0000000-0000-0000-0000-000000000004'; -- provider2
-  ad uuid := 'a0000000-0000-0000-0000-000000000005'; -- admin
-  pw text  := crypt('Demo@1234', gen_salt('bf'));
+CREATE OR REPLACE FUNCTION public._create_demo_user(
+  _id        uuid,
+  _email     text,
+  _full_name text,
+  _role      text,
+  _days_ago  integer
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
 BEGIN
+  -- Skip if user already exists with this email
+  IF EXISTS (SELECT 1 FROM auth.users WHERE email = _email) THEN
+    -- Update metadata so role is always correct
+    UPDATE auth.users
+    SET raw_user_meta_data = jsonb_build_object('full_name', _full_name, 'role', _role),
+        email_confirmed_at = COALESCE(email_confirmed_at, NOW())
+    WHERE email = _email;
+    RETURN;
+  END IF;
 
+  -- Insert into auth.users
   INSERT INTO auth.users (
-    instance_id, id, aud, role, email, encrypted_password,
-    email_confirmed_at, last_sign_in_at,
-    raw_app_meta_data, raw_user_meta_data,
-    is_super_admin, created_at, updated_at,
-    confirmation_token, email_change, email_change_token_new, recovery_token
-  ) VALUES
-    ('00000000-0000-0000-0000-000000000000', c1, 'authenticated', 'authenticated',
-     'customer1@demo.urbanease.in', pw, NOW(), NOW(),
-     '{"provider":"email","providers":["email"]}',
-     '{"full_name":"Priya Sharma","role":"customer"}',
-     false, NOW() - interval '30 days', NOW(), '', '', '', ''),
+    instance_id, id, aud, role, email,
+    encrypted_password,
+    email_confirmed_at,
+    last_sign_in_at,
+    raw_app_meta_data,
+    raw_user_meta_data,
+    is_super_admin,
+    created_at,
+    updated_at,
+    confirmation_token,
+    email_change,
+    email_change_token_new,
+    recovery_token,
+    is_sso_user
+  ) VALUES (
+    '00000000-0000-0000-0000-000000000000'::uuid,
+    _id,
+    'authenticated',
+    'authenticated',
+    _email,
+    crypt('Demo@1234', gen_salt('bf')),
+    NOW(),                                   -- email_confirmed_at = confirmed immediately
+    NOW(),
+    '{"provider":"email","providers":["email"]}'::jsonb,
+    jsonb_build_object('full_name', _full_name, 'role', _role),
+    false,
+    NOW() - (_days_ago || ' days')::interval,
+    NOW(),
+    '', '', '', '',
+    false
+  );
 
-    ('00000000-0000-0000-0000-000000000000', c2, 'authenticated', 'authenticated',
-     'customer2@demo.urbanease.in', pw, NOW(), NOW(),
-     '{"provider":"email","providers":["email"]}',
-     '{"full_name":"Rahul Desai","role":"customer"}',
-     false, NOW() - interval '25 days', NOW(), '', '', '', ''),
+  -- Insert identity record (required for email/password login)
+  INSERT INTO auth.identities (
+    user_id,
+    identity_data,
+    provider,
+    last_sign_in_at,
+    created_at,
+    updated_at,
+    provider_id
+  ) VALUES (
+    _id,
+    jsonb_build_object('sub', _id::text, 'email', _email),
+    'email',
+    NOW(),
+    NOW(),
+    NOW(),
+    _email
+  )
+  ON CONFLICT DO NOTHING;
+END;
+$$;
 
-    ('00000000-0000-0000-0000-000000000000', p1, 'authenticated', 'authenticated',
-     'provider1@demo.urbanease.in', pw, NOW(), NOW(),
-     '{"provider":"email","providers":["email"]}',
-     '{"full_name":"Meera Sharma","role":"provider"}',
-     false, NOW() - interval '60 days', NOW(), '', '', '', ''),
+-- Create 5 demo accounts
+SELECT public._create_demo_user(
+  'a0000000-0000-0000-0000-000000000001'::uuid,
+  'customer1@demo.urbanease.in', 'Priya Sharma', 'customer', 30);
 
-    ('00000000-0000-0000-0000-000000000000', p2, 'authenticated', 'authenticated',
-     'provider2@demo.urbanease.in', pw, NOW(), NOW(),
-     '{"provider":"email","providers":["email"]}',
-     '{"full_name":"Rajan Mehta","role":"provider"}',
-     false, NOW() - interval '55 days', NOW(), '', '', '', ''),
+SELECT public._create_demo_user(
+  'a0000000-0000-0000-0000-000000000002'::uuid,
+  'customer2@demo.urbanease.in', 'Rahul Desai', 'customer', 25);
 
-    ('00000000-0000-0000-0000-000000000000', ad, 'authenticated', 'authenticated',
-     'admin@demo.urbanease.in', pw, NOW(), NOW(),
-     '{"provider":"email","providers":["email"]}',
-     '{"full_name":"Admin User","role":"admin"}',
-     false, NOW() - interval '90 days', NOW(), '', '', '', '');
+SELECT public._create_demo_user(
+  'a0000000-0000-0000-0000-000000000003'::uuid,
+  'provider1@demo.urbanease.in', 'Meera Sharma', 'provider', 60);
 
-  -- Identity records (required for email login)
-  INSERT INTO auth.identities (id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at, provider_id)
-  VALUES
-    (gen_random_uuid(), c1, format('{"sub":"%s","email":"customer1@demo.urbanease.in"}', c1)::jsonb, 'email', NOW(), NOW(), NOW(), 'customer1@demo.urbanease.in'),
-    (gen_random_uuid(), c2, format('{"sub":"%s","email":"customer2@demo.urbanease.in"}', c2)::jsonb, 'email', NOW(), NOW(), NOW(), 'customer2@demo.urbanease.in'),
-    (gen_random_uuid(), p1, format('{"sub":"%s","email":"provider1@demo.urbanease.in"}', p1)::jsonb, 'email', NOW(), NOW(), NOW(), 'provider1@demo.urbanease.in'),
-    (gen_random_uuid(), p2, format('{"sub":"%s","email":"provider2@demo.urbanease.in"}', p2)::jsonb, 'email', NOW(), NOW(), NOW(), 'provider2@demo.urbanease.in'),
-    (gen_random_uuid(), ad, format('{"sub":"%s","email":"admin@demo.urbanease.in"}', ad)::jsonb,    'email', NOW(), NOW(), NOW(), 'admin@demo.urbanease.in');
+SELECT public._create_demo_user(
+  'a0000000-0000-0000-0000-000000000004'::uuid,
+  'provider2@demo.urbanease.in', 'Rajan Mehta', 'provider', 55);
 
-END $$;
+SELECT public._create_demo_user(
+  'a0000000-0000-0000-0000-000000000005'::uuid,
+  'admin@demo.urbanease.in', 'Admin User', 'admin', 90);
+
+-- Clean up helper (optional — keeps schema clean)
+DROP FUNCTION IF EXISTS public._create_demo_user;
 
 -- =============================================================================
--- SECTION 4: PROFILES
--- Trigger auto-creates on auth.users insert, but we insert explicitly for
--- the demo users since they were created above.
+-- SECTION 4: PROFILES (explicit insert — trigger also handles future signups)
 -- =============================================================================
 
 INSERT INTO public.profiles (id, full_name, email, role, created_at) VALUES
@@ -208,7 +247,7 @@ ON CONFLICT (id) DO UPDATE SET
   role       = EXCLUDED.role;
 
 -- =============================================================================
--- SECTION 5: SERVICES (9 services from mockData.ts)
+-- SECTION 5: SERVICES (9 services)
 -- =============================================================================
 
 INSERT INTO public.services (id, name, description, category, base_price, duration_minutes, thumbnail_url, is_active, avg_rating, total_reviews, badge) VALUES
@@ -216,42 +255,34 @@ INSERT INTO public.services (id, name, description, category, base_price, durati
    'Complete body waxing session by certified female beauty professionals at your home. Includes pre and post care.',
    'Beauty', 599, 90, 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=400&h=300&fit=crop',
    true, 4.8, 1240, 'Top Rated'),
-
   ('c0000000-0000-0000-0000-000000000002', 'Deep Home Cleaning',
    'Top-to-bottom professional home cleaning with eco-friendly products. Includes kitchen, bathrooms, bedrooms.',
    'Cleaning', 1199, 180, 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=400&h=300&fit=crop',
    true, 4.7, 3420, 'Popular'),
-
   ('c0000000-0000-0000-0000-000000000003', 'AC Service & Repair',
    'Comprehensive AC maintenance, gas recharge, filter cleaning, and repair by certified technicians.',
    'Appliance Repair', 799, 60, 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=400&h=300&fit=crop',
    true, 4.6, 2180, 'Top Rated'),
-
   ('c0000000-0000-0000-0000-000000000004', 'Plumbing Repair',
    'Fix leaks, pipe blockages, tap repairs, and bathroom fittings by expert plumbers.',
    'Plumbing', 499, 60, 'https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?w=400&h=300&fit=crop',
    true, 4.5, 980, NULL),
-
   ('c0000000-0000-0000-0000-000000000005', 'Electrical Work',
    'Wiring, switchboard repair, fan installation, and electrical safety inspection by licensed electricians.',
    'Electrical', 399, 45, 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop',
    true, 4.7, 1560, NULL),
-
   ('c0000000-0000-0000-0000-000000000006', 'Home Painting',
    'Interior and exterior painting with premium quality paints. Includes wall preparation and two coats.',
    'Painting', 3999, 480, 'https://images.unsplash.com/photo-1562259949-e8e7689d7828?w=400&h=300&fit=crop',
    true, 4.6, 720, 'New'),
-
   ('c0000000-0000-0000-0000-000000000007', 'Pest Control',
    'General pest control treatment covering cockroaches, ants, bed bugs, and rodents. Safe for kids and pets.',
    'Pest Control', 999, 120, 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=400&h=300&fit=crop',
    true, 4.4, 1890, NULL),
-
   ('c0000000-0000-0000-0000-000000000008', 'Salon at Home',
    'Complete salon experience at your doorstep — haircut, styling, facial, and more by certified stylists.',
    'Beauty', 699, 120, 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=400&h=300&fit=crop',
    true, 4.9, 4230, 'Top Rated'),
-
   ('c0000000-0000-0000-0000-000000000009', 'Yoga & Wellness Session',
    'Personal yoga, meditation, and wellness coaching at your home by certified wellness experts.',
    'Wellness', 899, 60, 'https://images.unsplash.com/photo-1575052814086-f385e2e2ad1b?w=400&h=300&fit=crop',
@@ -260,7 +291,6 @@ ON CONFLICT (id) DO NOTHING;
 
 -- =============================================================================
 -- SECTION 6: PROVIDERS
--- p1/p2 linked to demo auth users; p3/p4 are DB-only (for realistic search results)
 -- =============================================================================
 
 INSERT INTO public.providers (id, user_id, name, bio, avatar_url, experience_years, avg_rating, total_reviews, skills, is_verified, lat, lng, city) VALUES
@@ -272,7 +302,6 @@ INSERT INTO public.providers (id, user_id, name, bio, avatar_url, experience_yea
    6, 4.9, 312,
    ARRAY['Waxing', 'Facial', 'Bridal Makeup', 'Hair Styling', 'Skin Care'],
    true, 23.0225, 72.5714, 'Ahmedabad'),
-
   ('d0000000-0000-0000-0000-000000000002',
    'a0000000-0000-0000-0000-000000000004',
    'Rajan Mehta',
@@ -281,7 +310,6 @@ INSERT INTO public.providers (id, user_id, name, bio, avatar_url, experience_yea
    8, 4.6, 178,
    ARRAY['Pipe Repair', 'Tap Installation', 'Drainage', 'Water Heater', 'Bathroom Fittings'],
    true, 23.0350, 72.5800, 'Ahmedabad'),
-
   ('d0000000-0000-0000-0000-000000000003',
    NULL,
    'Sunil Patel',
@@ -290,7 +318,6 @@ INSERT INTO public.providers (id, user_id, name, bio, avatar_url, experience_yea
    5, 4.7, 234,
    ARRAY['Wiring', 'Fan Installation', 'Switchboard Repair', 'MCB/RCB', 'Safety Audit'],
    true, 23.0100, 72.5600, 'Ahmedabad'),
-
   ('d0000000-0000-0000-0000-000000000004',
    NULL,
    'Priya Joshi',
@@ -317,83 +344,67 @@ INSERT INTO public.addresses (id, user_id, label, line1, city, pincode, lat, lng
 ON CONFLICT (id) DO NOTHING;
 
 -- =============================================================================
--- SECTION 8: BOOKINGS (8 bookings showing every status)
+-- SECTION 8: BOOKINGS (8 bookings across every status)
 -- =============================================================================
 
 INSERT INTO public.bookings (id, customer_id, provider_id, service_id, address_id, scheduled_at, status, total_price, otp, created_at) VALUES
-
-  -- Pending: no provider assigned yet
+  -- Pending: no provider assigned
   ('f0000000-0000-0000-0000-000000000001',
    'a0000000-0000-0000-0000-000000000001', NULL,
    'c0000000-0000-0000-0000-000000000008',
    'e0000000-0000-0000-0000-000000000001',
-   NOW() + interval '2 days', 'Pending', 748, NULL,
-   NOW() - interval '1 hour'),
-
+   NOW() + interval '2 days', 'Pending', 748, NULL, NOW() - interval '1 hour'),
   -- Confirmed: provider1 accepted
   ('f0000000-0000-0000-0000-000000000002',
    'a0000000-0000-0000-0000-000000000001',
    'd0000000-0000-0000-0000-000000000001',
    'c0000000-0000-0000-0000-000000000001',
    'e0000000-0000-0000-0000-000000000001',
-   NOW() + interval '3 days', 'Confirmed', 648, NULL,
-   NOW() - interval '2 hours'),
-
-  -- On the Way: provider2 on route
+   NOW() + interval '3 days', 'Confirmed', 648, NULL, NOW() - interval '2 hours'),
+  -- On the Way: provider2
   ('f0000000-0000-0000-0000-000000000003',
    'a0000000-0000-0000-0000-000000000001',
    'd0000000-0000-0000-0000-000000000002',
    'c0000000-0000-0000-0000-000000000004',
    'e0000000-0000-0000-0000-000000000002',
-   NOW() + interval '1 hour', 'On the Way', 548, '7293',
-   NOW() - interval '3 hours'),
-
-  -- Completed with review: provider1 done for customer1
+   NOW() + interval '1 hour', 'On the Way', 548, '7293', NOW() - interval '3 hours'),
+  -- Completed + reviewed
   ('f0000000-0000-0000-0000-000000000004',
    'a0000000-0000-0000-0000-000000000001',
    'd0000000-0000-0000-0000-000000000001',
    'c0000000-0000-0000-0000-000000000002',
    'e0000000-0000-0000-0000-000000000001',
-   NOW() - interval '5 days', 'Completed', 1248, NULL,
-   NOW() - interval '7 days'),
-
-  -- Cancelled by customer1
+   NOW() - interval '5 days', 'Completed', 1248, NULL, NOW() - interval '7 days'),
+  -- Cancelled
   ('f0000000-0000-0000-0000-000000000005',
    'a0000000-0000-0000-0000-000000000001', NULL,
    'c0000000-0000-0000-0000-000000000005',
    'e0000000-0000-0000-0000-000000000001',
-   NOW() + interval '5 days', 'Cancelled', 448, NULL,
-   NOW() - interval '4 hours'),
-
-  -- Pending: customer2 (no provider)
+   NOW() + interval '5 days', 'Cancelled', 448, NULL, NOW() - interval '4 hours'),
+  -- Pending: customer2
   ('f0000000-0000-0000-0000-000000000006',
    'a0000000-0000-0000-0000-000000000002', NULL,
    'c0000000-0000-0000-0000-000000000007',
    'e0000000-0000-0000-0000-000000000003',
-   NOW() + interval '4 days', 'Pending', 1048, NULL,
-   NOW() - interval '30 minutes'),
-
-  -- Completed: customer2 with provider1
+   NOW() + interval '4 days', 'Pending', 1048, NULL, NOW() - interval '30 minutes'),
+  -- Completed: customer2
   ('f0000000-0000-0000-0000-000000000007',
    'a0000000-0000-0000-0000-000000000002',
    'd0000000-0000-0000-0000-000000000001',
    'c0000000-0000-0000-0000-000000000008',
    'e0000000-0000-0000-0000-000000000003',
-   NOW() - interval '10 days', 'Completed', 748, NULL,
-   NOW() - interval '12 days'),
-
-  -- Rejected: customer2 request rejected by provider2
+   NOW() - interval '10 days', 'Completed', 748, NULL, NOW() - interval '12 days'),
+  -- Rejected: customer2
   ('f0000000-0000-0000-0000-000000000008',
    'a0000000-0000-0000-0000-000000000002',
    'd0000000-0000-0000-0000-000000000002',
    'c0000000-0000-0000-0000-000000000009',
    'e0000000-0000-0000-0000-000000000004',
-   NOW() + interval '6 days', 'Rejected', 948, NULL,
-   NOW() - interval '6 hours')
+   NOW() + interval '6 days', 'Rejected', 948, NULL, NOW() - interval '6 hours')
 ON CONFLICT (id) DO NOTHING;
 
 -- =============================================================================
--- SECTION 9: REVIEWS (for completed bookings)
+-- SECTION 9: REVIEWS
 -- =============================================================================
 
 INSERT INTO public.reviews (id, booking_id, customer_id, provider_id, rating, comment, created_at) VALUES
@@ -404,7 +415,6 @@ INSERT INTO public.reviews (id, booking_id, customer_id, provider_id, rating, co
    5,
    'Meera was absolutely professional! She was on time, used quality products, and the results were amazing. Highly recommended!',
    NOW() - interval '4 days'),
-
   ('g0000000-0000-0000-0000-000000000002',
    'f0000000-0000-0000-0000-000000000007',
    'a0000000-0000-0000-0000-000000000002',
@@ -415,28 +425,24 @@ INSERT INTO public.reviews (id, booking_id, customer_id, provider_id, rating, co
 ON CONFLICT (id) DO NOTHING;
 
 -- =============================================================================
--- SECTION 10: PROVIDER AVAILABILITY (Mon–Fri 9am–6pm for both demo providers)
+-- SECTION 10: PROVIDER AVAILABILITY (Mon–Fri, 9am–5pm)
 -- =============================================================================
 
 INSERT INTO public.provider_availability (provider_id, day_of_week, time_slot, is_available)
-SELECT
-  p.id,
-  d.day,
-  t.slot,
-  true
+SELECT p.id, d.day, t.slot, true
 FROM
   (VALUES ('d0000000-0000-0000-0000-000000000001'::uuid),
           ('d0000000-0000-0000-0000-000000000002'::uuid)) AS p(id),
-  (VALUES (1),(2),(3),(4),(5)) AS d(day),
+  (VALUES (1),(2),(3),(4),(5))                           AS d(day),
   (VALUES ('09:00'),('10:00'),('11:00'),('12:00'),('13:00'),
-          ('14:00'),('15:00'),('16:00'),('17:00')) AS t(slot)
+          ('14:00'),('15:00'),('16:00'),('17:00'))        AS t(slot)
 ON CONFLICT (provider_id, day_of_week, time_slot) DO NOTHING;
 
 -- =============================================================================
--- DONE — Verify with:
---   SELECT COUNT(*) FROM public.profiles;    -- should be 5
---   SELECT COUNT(*) FROM public.services;    -- should be 9
---   SELECT COUNT(*) FROM public.providers;   -- should be 4
---   SELECT COUNT(*) FROM public.bookings;    -- should be 8
---   SELECT COUNT(*) FROM public.reviews;     -- should be 2
+-- DONE — Verify:
+--   SELECT email, email_confirmed_at IS NOT NULL as confirmed FROM auth.users WHERE email LIKE '%@demo.urbanease.in';
+--   SELECT COUNT(*) FROM public.profiles;   -- 5
+--   SELECT COUNT(*) FROM public.services;   -- 9
+--   SELECT COUNT(*) FROM public.providers;  -- 4
+--   SELECT COUNT(*) FROM public.bookings;   -- 8
 -- =============================================================================

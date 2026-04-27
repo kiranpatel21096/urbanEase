@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Calendar, Clock, MapPin, ChevronRight, CheckCircle, XCircle, Loader2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
@@ -248,9 +248,17 @@ function BookingCardContent({ booking, onClick }: { booking: Booking; onClick: (
         <div className="flex items-start justify-between gap-2">
           <div>
             <p className="font-semibold text-foreground text-sm">{booking.service?.name ?? 'Service'}</p>
-            <p className="text-xs text-muted-foreground">
-              {booking.provider?.name ?? 'Awaiting professional'}
-            </p>
+            {booking.provider ? (
+              <Link
+                to={`/providers/${booking.provider.id}`}
+                onClick={(e) => e.stopPropagation()}
+                className="text-xs text-primary hover:underline"
+              >
+                {booking.provider.name} · ⭐ {booking.provider.avg_rating}
+              </Link>
+            ) : (
+              <p className="text-xs text-muted-foreground">Awaiting professional</p>
+            )}
           </div>
           <Badge variant={statusVariant[booking.status]}>{booking.status}</Badge>
         </div>
