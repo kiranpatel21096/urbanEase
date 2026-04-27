@@ -134,7 +134,7 @@ export function BookingDetailPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 text-sm border-t border-border pt-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-sm border-t border-border pt-5">
             <div className="flex items-center gap-2 text-muted-foreground">
               <Calendar size={14} className="text-primary" />
               <span>{formatDate(booking.scheduled_at)}</span>

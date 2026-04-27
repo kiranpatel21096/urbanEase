@@ -283,7 +283,7 @@ export function BookingPage() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Address</span>
-                    <span className="font-medium text-right max-w-[60%]">
+                    <span className="font-medium text-right max-w-[55%] sm:max-w-[60%]">
                       {selectedAddress ? `${selectedAddress.line1}, ${selectedAddress.city}` : '—'}
                     </span>
                   </div>

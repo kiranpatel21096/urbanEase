@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Search, SlidersHorizontal } from 'lucide-react'
+import { Select } from '@/components/ui/select'
 import { useServices } from '@/hooks/useServices'
 import { ServiceCard } from '@/components/services/ServiceCard'
 import { ServiceCardSkeleton } from '@/components/shared/LoadingSkeleton'
@@ -83,9 +84,9 @@ export function ServicesPage() {
         </div>
 
         {/* Search + sort */}
-        <div className="flex gap-3 mb-6">
+        <div className="flex flex-col sm:flex-row gap-3 mb-6">
           <div className="flex-1 flex items-center gap-2 bg-white rounded-xl border border-border px-4">
-            <Search size={16} className="text-muted-foreground" />
+            <Search size={16} className="text-muted-foreground flex-shrink-0" />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -93,17 +94,17 @@ export function ServicesPage() {
               className="flex-1 py-2.5 text-sm bg-transparent outline-none text-foreground placeholder:text-muted-foreground"
             />
           </div>
-          <div className="flex items-center gap-2 bg-white rounded-xl border border-border px-3">
-            <SlidersHorizontal size={16} className="text-muted-foreground" />
-            <select
+          <div className="flex items-center gap-2 min-w-[180px]">
+            <SlidersHorizontal size={16} className="text-muted-foreground flex-shrink-0" />
+            <Select
               value={sort}
               onChange={(e) => setSort(e.target.value)}
-              className="py-2.5 text-sm bg-transparent outline-none text-foreground cursor-pointer"
+              className="flex-1"
             >
               {sortOptions.map((o) => (
                 <option key={o.value} value={o.value}>{o.label}</option>
               ))}
-            </select>
+            </Select>
           </div>
         </div>
 

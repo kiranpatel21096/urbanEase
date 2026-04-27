@@ -101,9 +101,9 @@ export function ProviderProfilePage() {
         {/* Rating breakdown */}
         <div className="bg-white rounded-2xl border border-border p-6 mb-6">
           <h2 className="text-lg font-bold text-foreground mb-5">Rating Breakdown</h2>
-          <div className="flex items-start gap-6">
-            <div className="text-center">
-              <p className="text-5xl font-extrabold text-foreground">{provider.avg_rating.toFixed(1)}</p>
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6">
+            <div className="text-center flex-shrink-0">
+              <p className="text-4xl sm:text-5xl font-extrabold text-foreground">{provider.avg_rating.toFixed(1)}</p>
               <StarRating rating={provider.avg_rating} size="md" className="justify-center mt-1 mb-1" />
               <p className="text-xs text-muted-foreground">{provider.total_reviews} reviews</p>
             </div>

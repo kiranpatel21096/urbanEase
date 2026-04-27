@@ -34,13 +34,14 @@ function StatCard({ label, value, icon: Icon, color }: {
   label: string; value: string | number; icon: React.ElementType; color: string
 }) {
   return (
-    <div className="bg-white rounded-2xl border border-border p-5 flex items-center gap-4">
-      <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${color}`}>
-        <Icon size={20} />
+    <div className="bg-white rounded-2xl border border-border p-3 sm:p-5 flex flex-col sm:flex-row items-center sm:items-center gap-2 sm:gap-4">
+      <div className={`w-9 h-9 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${color}`}>
+        <Icon size={16} className="sm:hidden" />
+        <Icon size={20} className="hidden sm:block" />
       </div>
-      <div>
-        <p className="text-2xl font-bold text-foreground leading-none">{value}</p>
-        <p className="text-sm text-muted-foreground mt-0.5">{label}</p>
+      <div className="text-center sm:text-left min-w-0">
+        <p className="text-xl sm:text-2xl font-bold text-foreground leading-none">{value}</p>
+        <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 leading-tight">{label}</p>
       </div>
     </div>
   )
@@ -100,7 +101,7 @@ function CustomerDashboardView() {
   return (
     <div className="space-y-6">
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
         <StatCard label="Total"     value={isLoading ? '—' : total}     icon={CalendarCheck} color="bg-blue-50 text-blue-600" />
         <StatCard label="Upcoming"  value={isLoading ? '—' : upcoming}  icon={Clock}         color="bg-amber-50 text-amber-600" />
         <StatCard label="Completed" value={isLoading ? '—' : completed} icon={Star}          color="bg-green-50 text-green-600" />
@@ -126,7 +127,7 @@ function CustomerDashboardView() {
       {/* Quick actions */}
       <div>
         <h2 className="text-base font-semibold text-foreground mb-3">Quick Actions</h2>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {quickActions.map(({ label, desc, icon: Icon, to, color }) => (
             <Link
               key={to}
@@ -209,7 +210,7 @@ function ProviderDashboardView() {
       )}
 
       {/* Stats */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3">
         <StatCard
           label="Pending Requests"
           value={isLoading ? '—' : pendingJobs}
@@ -257,7 +258,7 @@ function ProviderDashboardView() {
       {/* Quick actions */}
       <div>
         <h2 className="text-base font-semibold text-foreground mb-3">Quick Actions</h2>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {quickActions.map(({ label, desc, icon: Icon, to, color, badge }) => (
             <Link
               key={to}
